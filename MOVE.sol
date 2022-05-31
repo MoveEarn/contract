@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.7.6;
+pragma solidity ^0.8.2;
 
 library SafeMath {
     /**
@@ -317,11 +317,12 @@ interface IERC20 {
 
 abstract contract Context {
     function _msgSender() internal view virtual returns (address payable) {
-        return msg.sender;
+        return payable(msg.sender);
     }
 
     function _msgData() internal view virtual returns (bytes memory) {
-        this; // silence state mutability warning without generating bytecode - see https://github.com/ethereum/solidity/issues/2691
+         // fix  - can be removed in newer solidity
+        // this; // silence state mutability warning without generating bytecode - see https://github.com/ethereum/solidity/issues/2691
         return msg.data;
     }
 }
@@ -1104,8 +1105,11 @@ contract TokenERC20 is Ownable, ERC20 {
     uint256 public antiWhaleStartTime;
     uint256 public constant antiWhaleDuration = 15 minutes;
 
-    address public treasuryAddress = 0x000000000000000000000000000000000000000;
-    address public stakingAddress = 0x000000000000000000000000000000000000000;
+    address public treasuryAddress = 0x9D22592f890c6599cA1e04eB5a67940B360C696B;
+    address public stakingAddress = 0x76630c8D9C3CfA753dc18b4626300391039dB8e3;
+//fix anti whale
+    uint public constant antiWhaleMin = 1;
+    uint public constant antiWhaleMax = 1000;
 
     mapping(address => bool) public presaleAddress;
 
@@ -1116,6 +1120,8 @@ contract TokenERC20 is Ownable, ERC20 {
     ) ERC20(name, symbol, decimals) Ownable(treasuryAddress) {}
 
     function setAntiWhaleAmount(uint256 _amount) public onlyTreasury {
+          //fix
+         require(_amount >= antiWhaleMin && _amount <= antiWhaleMax, "Invalid Value");
         // set anti whale amount also activate antibot
         require(antiWhaleAmount == 0, "Can set antiWhale once"); // antiWhale can only activate once
         antiWhaleAmount = _amount;
@@ -1126,6 +1132,8 @@ contract TokenERC20 is Ownable, ERC20 {
         return block.timestamp > antiWhaleStartTime + antiWhaleDuration;
     }
     function setStakingAddress(address _stakingAddress) external onlyTreasury {
+        // fix
+        require(_stakingAddress != address(0), "Staking address cannot be zero address");
         stakingAddress = _stakingAddress;
     }
 
@@ -1148,12 +1156,15 @@ contract TokenERC20 is Ownable, ERC20 {
         presaleAddress[_presaleAddress] = true;
     }
 
-    function sweepBNB(address _to) public onlyTreasury {
-        payable(_to).transfer(address(this).balance);
+   function sweepBNB() public onlyTreasury {
+        //fix
+        payable(treasuryAddress).transfer(address(this).balance);
     }
 
-    function sweepToken(address _token, address _to) public onlyTreasury {
-        IERC20(_token).transfer(_to, IERC20(_token).balanceOf(address(this)));
+         function sweepToken(address _token, address _to) public onlyTreasury {
+        //fix
+        bool success = IERC20(_token).transfer(_to, IERC20(_token).balanceOf(address(this)));
+        require(success,"Transfer failed");
     }
 }
 
